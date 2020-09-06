@@ -1,114 +1,106 @@
 <?php
     /**
      * Aqua
-     * Lightweight API router based on siesta
-     * Siesta: https://github.com/smarulanda/Siesta
+     * Lightweight API router
      * 
      * 
      * Author: aZure
      */
-class Aqua {
 
-	protected $base_path;
-	protected $request_uri;
-	protected $request_method;
-	protected $http_methods = array('get', 'post', 'put', 'patch', 'delete');
-	protected $route_vars = array('int' => '/^[0-9]+$/', 'any' => '/^[0-9A-Za-z]+$/');
+require_once("database.php");
+		 
+	class Aqua extends Database{
+		protected $database = 'Database';
 
-    //Constructor (set base path if needed)
-	function __construct($base_path = ''){
-		$this->base_path = $base_path;
+		protected $base_path;
+		protected $request_uri;
+		protected $request_method;
+		protected $auth_token;
+		protected $http_methods = array('GET', 'POST', 'PUT', 'PATCH', 'DELETE');
 
-		//Fix query string
-		$this->request_uri = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/');
-		$this->request_method = $this->_resolve_http_method();
-	}
+		//Constructor (set base path if needed)
+		function __construct($base_path = ''){
+			$this->base_path = $base_path;
 
-	//Map Routes
-	public function respond($method, $route, $callable){
-		$method = strtolower($method);
-
-		if ($route == '/') $route = $this->base_path;
-		else $route = $this->base_path . $route;
-
-		$matches = $this->_match_route_vars($route);
-
-		if (is_array($matches) && $method == $this->request_method){
-			//Found matching Route
-			call_user_func_array($callable, $matches);
+			//Fix query string
+			$this->auth_token = $_SERVER['QUERY_STRING'];
+			$this->request_method = $_SERVER['REQUEST_METHOD'];
+			$this->request_uri = rtrim(strtok($_SERVER['REQUEST_URI'], '?'), '/');
 		}
-	}
 
-	//Resolve http method
-	private function _resolve_http_method() {
-		$method = strtolower($_SERVER['REQUEST_METHOD']);
+		//Map Routes
+		public function respond($method, $path, $requires_auth, $cb){
+			if($requires_auth == true){
+				$a = $this->authenticate($this->auth_token);
+			}
+			else{ $a = true; }
 
-		if (in_array($method, $this->http_methods)){
-			return $method;
+			if($path == '/'){ $route = $this->base_path; }
+			else{ $path = $this->base_path.$path; }
+
+			$params = $this->match_route_vars($path);
+			$method = $this->resolve_http_method($method);
+
+
+
+			if(is_array($params) && $method == $this->request_method && $a == true){
+				call_user_func_array($cb, $params);
+				$this->postHandler($this->auth_token);
+			}
+
+			if(is_array($params) && $method == $this->request_method && $a == false){
+				echo "User not authentified";
+			}
 		}
-		return 'get';
-	}
 
-	//Check Route for possible parameters
-	private function _match_route_vars($route){
-		$vars = array();
-
-		$xreq = explode('/', $this->request_uri);
-		$xroute = explode('/', $route);
-
-		if (count($xreq) == count($xroute)){
-			foreach ($xroute as $key => $value){
-				if ($value == $xreq[$key]){
-					continue;
-				}
-				elseif ($value[0] == '{' && substr($value, -1) == '}'){
-					//Variable detected
-					$strip = str_replace(array('{', '}'), '', $value);
-					$exp = explode(':', $strip);
-
-                    $var_type = $exp[0];
-                    if($var_type == ""){ $var_type = "any"; }
-
-					if (array_key_exists($var_type, $this->route_vars)){
-						//Check if variable matches defined pattern
-						$pattern = $this->route_vars[$var_type];
-						
-						if (preg_match($pattern, $xreq[$key])){
-							if (isset($exp[1])) {
-								$vars[$exp[1]] = $xreq[$key];
-							}
-							//Match found
-							continue;
-						}
-					}
-				}	
-				//Mis-match
+		//Resolve http method
+		private function resolve_http_method($method) {
+			if(in_array($method, $this->http_methods)){
+				return $method;
+			}else{
 				return false;
 			}
-			//Total segments match
-			return $vars;
 		}
-		return false;
-	}
 
-	public function checkSubmittedData($required, $submitted){
-		$errs = 0;
-		foreach($required as $value){
-			
+		//Check Route for possible parameters
+		private function match_route_vars($path){
+			$vars = array();
 
-			if(array_key_exists($value, $submitted)){
-				continue;
-			}else{
-				echo "Data missing: ".$value;
-				$errs++;
+			$xreq = explode('/', $this->request_uri);
+			$xpath = explode('/', $path);
+
+			if(count($xreq) == count($xpath)){
+				foreach($xpath as $i => $value){
+					if($xreq[$i] == $value){ continue; }
+					elseif(substr($value, 0, 1) == ':' && substr($value, -1, 1) == ':'){
+						$x = str_replace(array(':', ':'), '', $value);
+						$vars[$x] = $xreq[$i];
+
+						continue;
+					}
+
+					return false;
+				}
+
+				return $vars;
 			}
-		}
-		if($errs == 0){
-			return true;
-		}else{
+
 			return false;
 		}
+
+		//Authenticate the user
+		private function authenticate($token){
+			//insert your authentification method
+
+			if(/*statement*/){
+				return false;
+			}
+			else{ return true; }
+		}
+
+		private function postHandler($token){
+			// Update token uses or retrieve general information after callback
+		}
 	}
-}
 
 ?>
