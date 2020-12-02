@@ -19,7 +19,7 @@ Optional (Before using the `respond` method)
 $router->param_symbol = ':';
 
  //Allowed methods (case insensitive)
-$router->allowed_methods = ['get', 'post', 'put', 'delete', 'head'];
+$router->allowed_methods = ['get', 'post', 'put', 'delete', 'head']; //Default setting
 $router->allowed_methods[] = 'head';
 
 //Add 'Something' to the array returned in the respond() callback. Can replace function() use ()
