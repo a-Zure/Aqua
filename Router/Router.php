@@ -3,9 +3,9 @@
 namespace Aqua;
 
 class Router {
-    //Settings on handling Requests
-    private string $param_symbol = ':';
-    private array $allowed_methods = ['get', 'post', 'put', 'delete'];
+    //Settings
+    public string $param_symbol = ':';
+    public array $allowed_methods = ['get', 'post', 'put', 'delete'];
 
     //Request information
     private string $req_method;
@@ -13,11 +13,12 @@ class Router {
     private $req_body;
     private $req_params;
 
-    //Items that will be added to the callback
+    //Callback items
     private $callback_items;
 
-    //Found a route
-    public bool $routeFound = false;
+    //Results of routes
+    public bool $route_found = false;
+    public bool $wrong_method = false;
 
     function __construct() {
         $this->req_method = strtolower($_SERVER['REQUEST_METHOD']);
@@ -28,20 +29,19 @@ class Router {
         parse_str($url['query'], $this->req_params);
     }
 
-    function options(array $options) {
-        foreach ($options as $key => $value) {
-            if (!empty($value)) $this->$key = $value;
-        }
-    }
-
     function use(string $name, $item) {
         $this->callback_items[$name] = $item;
     }
 
     function respond(string $method, string $path, $callback) {
-        if($this->routeFound) return;
-
+        if ($this->route_found) return;
         $method = strtolower($method);
+
+        if (!in_array($this->req_method, $this->allowed_methods)) {
+            $this->wrong_method = true;
+            return;
+        }
+
         if ($method != $this->req_method) return;
 
         $func_split = explode('/', $this->trimPath($path));
@@ -70,7 +70,7 @@ class Router {
         $params['body'] = $this->req_body;
 
         call_user_func($callback, $params);
-        $this->routeFound = true;
+        $this->route_found = true;
     }
 
     private function trimPath(string $path) {
