@@ -3,7 +3,7 @@
 namespace Aqua;
 
 class Router {
-    //Settings
+    //Settings on handling Requests
     private string $param_symbol = ':';
     private array $allowed_methods = ['get', 'post', 'put', 'delete'];
 
@@ -13,7 +13,7 @@ class Router {
     private $req_body;
     private $req_params;
 
-    //Callback items
+    //Items that will be added to the callback
     private $callback_items;
 
     //Found a route
